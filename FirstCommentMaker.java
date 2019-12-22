@@ -32,23 +32,23 @@ import com.google.common.collect.Lists;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import static java.lang.System.exit;
+
 /**
- * Print a list of videos matching a search term.
+ * Gets the first comment on a youtube video.
  *
- * @author Jeremy Walker
+ * Starts by preforming one search and finding the most recent video by a specified channel. Then
+ * makes regular searches comparing the newest videos ID to the ID of the previously known video.
+ *
+ * If a new video is found, the program makes a request to the comment api with the specified
+ * comment, prints the new video information, and exits.
+ *
+ * @author Jim Howe
  */
 public class FirstCommentMaker {
-
-    /**
-     * Define a global variable that identifies the name of a file that
-     * contains the developer's API key.
-     */
-    private static final long NUMBER_OF_VIDEOS_RETURNED = 1;
-
     /**
      * Initialize a YouTube object to search for videos on YouTube. Then
      * display the name and thumbnail image of each video in the result set.
@@ -60,11 +60,6 @@ public class FirstCommentMaker {
         List<String> scopes = Lists.newArrayList("https://www.googleapis.com/auth/youtube.force-ssl");
 
         try {
-            // This object is used to make YouTube Data API requests. The last
-            // argument is required, but since we don't need anything
-            // initialized when the HttpRequest is initialized, we override
-            // the interface and provide a no-op function.
-
             /*
              * Define a global instance of a Youtube object, which will be used
              * to make YouTube Data API requests.
@@ -74,70 +69,58 @@ public class FirstCommentMaker {
                 }
             }).setApplicationName("youtube-cmdline-search-sample").build();
 
-            // Define the API request for retrieving search results.
-            YouTube.Search.List search = youtube.search().list("id,snippet");
-
-            // Prompt the user to enter a channel id.
+            // Prompt the user to enter information regarding the search.
             String channelId = getChannelId();
-
-            // Prompt the user to enter a query term.
             String queryTerm = getSearchTerm();
-
-            // Prompt the user for the comment text.
-            // Retrieve the text that the user is commenting.
             String commentText = getCommentText();
-
-            // Set your developer key from the {{ Google Cloud Console }} for
-            // non-authenticated requests. See:
-            // {{ https://cloud.google.com/console }}
-            String apiKey = "AIzaSyCWSMHiTxBrWc2nAZLOBZWVFDoOxJzDee4";
-            search.setKey(apiKey);
-            search.setChannelId(channelId);
-            search.setQ(queryTerm);
-
-            // To increase efficiency, only retrieve the fields that the
-            // application uses.
-            search.setFields("items(id/kind,id/videoId)");
-            search.setMaxResults(NUMBER_OF_VIDEOS_RETURNED);
-            search.setOrder("date");
-            search.setType("video");
-
-            // Retrieve the video ID that the user is commenting to.
-            // Call the API and print results.
             int numSearches = getNumSearches();
             long searchInterval = (long) getSearchInterval();
 
+            //sets the api key. Change this to your own key.
+            String apiKey = "AIzaSyCWSMHiTxBrWc2nAZLOBZWVFDoOxJzDee4";
+
+            // Define the API request for retrieving search results.
+            YouTube.Search.List search = youtube.search().list("id,snippet");
+
+            // Sets attributes of the search
+            search.setKey(apiKey);
+            search.setChannelId(channelId);
+            search.setQ(queryTerm);
+            search.setFields("items(id/kind,id/videoId)");
+            search.setMaxResults((long)1);
+            search.setOrder("date");
+            search.setType("video");
+
             String videoId = null;
 
-            ArrayList<String> seenIDs = new ArrayList<String>();
+            String seenID = null;
 
+            //executes the search once, and sets the seen ID to the one found
             SearchListResponse searchResponse = search.execute();
             List<SearchResult> searchResultList = searchResponse.getItems();
 
             if (searchResultList != null) {
                 SearchResult singleVideo = searchResultList.iterator().next();
-                ResourceId rId = singleVideo.getId();
-                seenIDs.add(rId.getVideoId());
+                if(singleVideo == null) {
+                    System.out.println("Your query didn't find any results");
+                    exit(1);
+                }
+                else {
+                    ResourceId rId = singleVideo.getId();
+                    seenID = rId.getVideoId();
+                }
             }
 
             while (numSearches > 0) {
                 while (videoId == null && numSearches > 0) {
-                    numSearches--;
+                    System.out.print("Searching for new videos, " + numSearches-- + " left\n");
                     Thread.sleep(searchInterval*1000); //replaces below, no time spent printing
-                    /*
-                    System.out.print("Searching for new videos, " + numSearches + " left\n");
-                    Thread.sleep(searchInterval * 1000 / 3);
-                    System.out.println(".");
-                    Thread.sleep(searchInterval * 1000 / 3);
-                    System.out.println(".");
-                    Thread.sleep(searchInterval * 1000 / 3);
-                     */
                     searchResponse = search.execute();
                     searchResultList = searchResponse.getItems();
                     if (searchResultList != null) {
-                        videoId = getNewVideoId(searchResultList.iterator(), seenIDs);
+                        videoId = getNewVideoId(searchResultList.iterator(), seenID);
                         if(videoId != null) {
-                            seenIDs.add(videoId);
+                            seenID = videoId;
                         }
                     }
                 }
@@ -198,30 +181,21 @@ public class FirstCommentMaker {
             t.printStackTrace();
         }
     }
-    /*
-     * Prints out all results in the Iterator. For each result, print the
-     * title, video ID, and thumbnail.
-     *
-     * @param iteratorSearchResults Iterator of SearchResults to print
-     *
-     * @param query FirstCommentMaker query (String)
-     */
 
-    private static String getNewVideoId(Iterator<SearchResult> iteratorSearchResults, ArrayList<String> seenIDs) {
+    private static String getNewVideoId(Iterator<SearchResult> iteratorSearchResults, String seenID) {
 
-        if (!iteratorSearchResults.hasNext()) {
+        SearchResult foundVideo = iteratorSearchResults.next();
+
+        if (foundVideo == null) {
             System.out.println(" There aren't any results for your query.");
+            exit(1);
         }
-
-        while (iteratorSearchResults.hasNext()) {
-
-            SearchResult singleVideo = iteratorSearchResults.next();
-            ResourceId rId = singleVideo.getId();
-
+        else {
+            ResourceId rId = foundVideo.getId();
             // Confirm that the result represents a video. Otherwise, the
             // item will not contain a video ID.
             if (rId.getKind().equals("youtube#video")) {
-                if(!seenIDs.contains(rId.getVideoId())) {
+                if(!seenID.equals(rId.getVideoId())) {
                     System.out.println("\n-------------------------------------------------------------\n");
                     System.out.println(" Video Id" + rId.getVideoId());
                     System.out.println("\n-------------------------------------------------------------\n");
