@@ -77,7 +77,7 @@ public class FirstCommentMaker {
             long searchInterval = (long) getSearchInterval();
 
             //sets the api key. Change this to your own key.
-            String apiKey = "AIzaSyCWSMHiTxBrWc2nAZLOBZWVFDoOxJzDee4";
+            String apiKey = "[YOUR_KEY_HERE]";
 
             // Define the API request for retrieving search results.
             YouTube.Search.List search = youtube.search().list("id,snippet");
