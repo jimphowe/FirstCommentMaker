@@ -67,7 +67,7 @@ public class FirstCommentMaker {
             YouTube youtube = new YouTube.Builder(Auth.HTTP_TRANSPORT, Auth.JSON_FACTORY, new HttpRequestInitializer() {
                 public void initialize(HttpRequest request) {
                 }
-            }).setApplicationName("youtube-cmdline-search-sample").build();
+            }).setApplicationName("first-comment-maker").build();
 
             // Prompt the user to enter information regarding the search.
             String channelId = getChannelId();
@@ -77,7 +77,7 @@ public class FirstCommentMaker {
             long searchInterval = (long) getSearchInterval();
 
             //sets the api key. Change this to your own key.
-            String apiKey = "AIzaSyCWSMHiTxBrWc2nAZLOBZWVFDoOxJzDee4";
+            String apiKey = "[YOUR KEY HERE]";
 
             // Define the API request for retrieving search results.
             YouTube.Search.List search = youtube.search().list("id,snippet");
@@ -114,7 +114,7 @@ public class FirstCommentMaker {
             while (numSearches > 0) {
                 while (videoId == null && numSearches > 0) {
                     System.out.print("Searching for new videos, " + numSearches-- + " left\n");
-                    Thread.sleep(searchInterval*1000); //replaces below, no time spent printing
+                    Thread.sleep(searchInterval*1000);
                     searchResponse = search.execute();
                     searchResultList = searchResponse.getItems();
                     if (searchResultList != null) {
@@ -207,7 +207,7 @@ public class FirstCommentMaker {
     }
 
     /*
-     * Prompt the user to enter a search term. Then return the ID.
+     * Prompt the user to enter a search term. Then return the term.
      */
     private static String getSearchTerm() throws IOException {
 
@@ -263,7 +263,7 @@ public class FirstCommentMaker {
     }
 
     /*
-     * Prompt the user to enter the number of searches to be made.
+     * Prompt the user to enter the interval to wait between searches.
      */
     private static int getSearchInterval() throws IOException {
 
